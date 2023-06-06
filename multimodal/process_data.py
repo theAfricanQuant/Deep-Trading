@@ -118,21 +118,16 @@ def text_process(text):
 
 
 def transform_text2sentences(train, test, save_train = 'train_text.p', save_test = 'test_text.p'):
-	'''
+    '''
 		Transforming raw text into sentences, 
 		if @save_train or @save_test is not None - saves pickles for further use
 	'''
-	train_text = []
-	test_text = []
-	for each in train['Combined']:
-	    train_text.append(text_process(each))
-	for each in test['Combined']:
-	    test_text.append(text_process(each))
+    train_text = [text_process(each) for each in train['Combined']]
+    test_text = [text_process(each) for each in test['Combined']]
+    if save_train != None: cPickle.dump(train_text, open(save_train, 'wb'))
+    if save_test != None: cPickle.dump(test_text, open(save_test, 'wb')) 
 
-	if save_train != None: cPickle.dump(train_text, open(save_train, 'wb')) 
-	if save_test != None: cPickle.dump(test_text, open(save_test, 'wb')) 
-
-	return train_text, test_text
+    return train_text, test_text
 
 
 def transform_text_into_vectors(train_text, test_text, embedding_size = 100, model_path = 'word2vec10.model'):

@@ -54,9 +54,8 @@ def _get_length_sequences_where(x):
     """
     if len(x) == 0:
         return [0]
-    else:
-        res = [len(list(group)) for value, group in itertools.groupby(x) if value == 1]
-        return res if len(res) > 0 else [0]
+    res = [len(list(group)) for value, group in itertools.groupby(x) if value == 1]
+    return res if res else [0]
 
 
 def _estimate_friedrich_coefficients(x, m, r):
@@ -207,8 +206,10 @@ def symmetry_looking(x, param):
         x = np.asarray(x)
     mean_median_difference = np.abs(np.mean(x) - np.median(x))
     max_min_difference = np.max(x) - np.min(x)
-    return [("r_{}".format(r["r"]), mean_median_difference < (r["r"] * max_min_difference))
-            for r in param]
+    return [
+        (f'r_{r["r"]}', mean_median_difference < (r["r"] * max_min_difference))
+        for r in param
+    ]
 
 
 @set_property("fctype", "simple")
@@ -267,10 +268,7 @@ def sum_values(x):
     :return: the value of this feature
     :return type: bool
     """
-    if len(x) == 0:
-        return 0
-
-    return np.sum(x)
+    return 0 if len(x) == 0 else np.sum(x)
 
 
 @set_property("fctype", "combiner")
@@ -301,7 +299,10 @@ def agg_autocorrelation(x, param):
         a = 0
     else:
         a = acf(x, unbiased=True, fft=n > 1250)[1:]
-    return [("f_agg_\"{}\"".format(config["f_agg"]), getattr(np, config["f_agg"])(a)) for config in param]
+    return [
+        (f'f_agg_\"{config["f_agg"]}\"', getattr(np, config["f_agg"])(a))
+        for config in param
+    ]
 
 
 @set_property("fctype", "combiner")
@@ -339,21 +340,18 @@ def partial_autocorrelation(x, param):
     :return type: float
     """
     # Check the difference between demanded lags by param and possible lags to calculate (depends on len(x))
-    max_demanded_lag = max([lag["lag"] for lag in param])
+    max_demanded_lag = max(lag["lag"] for lag in param)
     n = len(x)
 
     # Check if list is too short to make calculations
     if n <= 1:
         pacf_coeffs = [np.nan] * (max_demanded_lag + 1)
     else:
-        if (n <= max_demanded_lag):
-            max_lag = n - 1
-        else:
-            max_lag = max_demanded_lag
+        max_lag = n - 1 if (n <= max_demanded_lag) else max_demanded_lag
         pacf_coeffs = list(pacf(x, method="ld", nlags=max_lag))
-        pacf_coeffs = pacf_coeffs + [np.nan] * max(0, (max_demanded_lag - max_lag))
+        pacf_coeffs += [np.nan] * max(0, (max_demanded_lag - max_lag))
 
-    return [("lag_{}".format(lag["lag"]), pacf_coeffs[lag["lag"]]) for lag in param]
+    return [(f'lag_{lag["lag"]}', pacf_coeffs[lag["lag"]]) for lag in param]
 
 
 @set_property("fctype", "combiner")
@@ -379,11 +377,19 @@ def augmented_dickey_fuller(x, param):
     except ValueError:  # occurs if sample size is too small
         res = np.NaN, np.NaN, np.NaN
 
-    return [('attr_"{}"'.format(config["attr"]),
-                  res[0] if config["attr"] == "teststat"
-             else res[1] if config["attr"] == "pvalue"
-             else res[2] if config["attr"] == "usedlag" else np.NaN)
-            for config in param]
+    return [
+        (
+            f'attr_"{config["attr"]}"',
+            res[0]
+            if config["attr"] == "teststat"
+            else res[1]
+            if config["attr"] == "pvalue"
+            else res[2]
+            if config["attr"] == "usedlag"
+            else np.NaN,
+        )
+        for config in param
+    ]
 
 
 @set_property("fctype", "simple")
@@ -787,10 +793,7 @@ def percentage_of_reoccurring_values_to_all_values(x):
     value_counts = x.value_counts()
     reoccuring_values = value_counts[value_counts > 1].sum()
 
-    if np.isnan(reoccuring_values):
-        return 0
-
-    return reoccuring_values / x.size
+    return 0 if np.isnan(reoccuring_values) else reoccuring_values / x.size
 
 
 @set_property("fctype", "simple")
@@ -842,10 +845,7 @@ def ratio_value_number_to_time_series_length(x):
     """
     if not isinstance(x, (np.ndarray, pd.Series)):
         x = np.asarray(x)
-    if x.size == 0:
-        return np.nan
-
-    return np.unique(x).size / x.size
+    return np.nan if x.size == 0 else np.unique(x).size / x.size
 
 
 @set_property("fctype", "combiner")
@@ -870,9 +870,15 @@ def fft_coefficient(x, param):
     :return type: pandas.Series
     """
 
-    assert min([config["coeff"] for config in param]) >= 0, "Coefficients must be positive or zero."
-    assert set([config["attr"] for config in param]) <= set(["imag", "real", "abs", "angle"]), \
-        'Attribute must be "real", "imag", "angle" or "abs"'
+    assert (
+        min(config["coeff"] for config in param) >= 0
+    ), "Coefficients must be positive or zero."
+    assert {config["attr"] for config in param} <= {
+        "imag",
+        "real",
+        "abs",
+        "angle",
+    }, 'Attribute must be "real", "imag", "angle" or "abs"'
 
     fft = np.fft.rfft(x)
 
@@ -906,8 +912,12 @@ def fft_aggregated(x, param):
     :return type: pandas.Series
     """
 
-    assert set([config["aggtype"] for config in param]) <= set(["centroid", "variance", "skew", "kurtosis"]), \
-        'Attribute must be "centroid", "variance", "skew", "kurtosis"'
+    assert {config["aggtype"] for config in param} <= {
+        "centroid",
+        "variance",
+        "skew",
+        "kurtosis",
+    }, 'Attribute must be "centroid", "variance", "skew", "kurtosis"'
 
 
     def get_moment(y, moment):
@@ -1059,12 +1069,16 @@ def index_mass_quantile(x, param):
 
     if s == 0:
         # all values in x are zero or it has length 0
-        return [("q_{}".format(config["q"]), np.NaN) for config in param]
-    else:
-        # at least one value is not zero
-        mass_centralized = np.cumsum(abs_x) / s
-        return [("q_{}".format(config["q"]),
-                (np.argmax(mass_centralized >= config["q"])+1)/len(x)) for config in param]
+        return [(f'q_{config["q"]}', np.NaN) for config in param]
+    # at least one value is not zero
+    mass_centralized = np.cumsum(abs_x) / s
+    return [
+        (
+            f'q_{config["q"]}',
+            (np.argmax(mass_centralized >= config["q"]) + 1) / len(x),
+        )
+        for config in param
+    ]
 
 
 @set_property("fctype", "simple")
@@ -1106,8 +1120,10 @@ def linear_trend(x, param):
 
     linReg = linregress(range(len(x)), x)
 
-    return [("attr_\"{}\"".format(config["attr"]), getattr(linReg, config["attr"]))
-            for config in param]
+    return [
+        (f'attr_\"{config["attr"]}\"', getattr(linReg, config["attr"]))
+        for config in param
+    ]
 
 
 @set_property("fctype", "combiner")
@@ -1147,7 +1163,7 @@ def cwt_coefficients(x, param):
 
         calculated_cwt_for_widths = calculated_cwt[widths]
 
-        indices += ["widths_{}__coeff_{}__w_{}".format(widths, coeff, w)]
+        indices += [f"widths_{widths}__coeff_{coeff}__w_{w}"]
 
         i = widths.index(w)
         if calculated_cwt_for_widths.shape[1] <= coeff:
@@ -1176,19 +1192,17 @@ def spkt_welch_density(x, param):
 
     freq, pxx = welch(x)
     coeff = [config["coeff"] for config in param]
-    indices = ["coeff_{}".format(i) for i in coeff]
+    indices = [f"coeff_{i}" for i in coeff]
 
-    if len(pxx) <= np.max(coeff):  # There are fewer data points in the time series than requested coefficients
-
-        # filter coefficients that are not contained in pxx
-        reduced_coeff = [coefficient for coefficient in coeff if len(pxx) > coefficient]
-        not_calculated_coefficients = [coefficient for coefficient in coeff
-                                       if coefficient not in reduced_coeff]
-
-        # Fill up the rest of the requested coefficients with np.NaNs
-        return zip(indices, list(pxx[reduced_coeff]) + [np.NaN] * len(not_calculated_coefficients))
-    else:
+    if len(pxx) > np.max(coeff):
         return zip(indices, pxx[coeff])
+    # filter coefficients that are not contained in pxx
+    reduced_coeff = [coefficient for coefficient in coeff if len(pxx) > coefficient]
+    not_calculated_coefficients = [coefficient for coefficient in coeff
+                                   if coefficient not in reduced_coeff]
+
+    # Fill up the rest of the requested coefficients with np.NaNs
+    return zip(indices, list(pxx[reduced_coeff]) + [np.NaN] * len(not_calculated_coefficients))
 
 
 @set_property("fctype", "combiner")
@@ -1223,7 +1237,7 @@ def ar_coefficient(x, param):
         k = parameter_combination["k"]
         p = parameter_combination["coeff"]
 
-        column_name = "k_{}__coeff_{}".format(k, p)
+        column_name = f"k_{k}__coeff_{p}"
 
         if k not in calculated_ar_params:
             try:
@@ -1241,7 +1255,7 @@ def ar_coefficient(x, param):
         else:
             res[column_name] = np.NaN
 
-    return [(key, value) for key, value in res.items()]
+    return list(res.items())
 
 
 @set_property("fctype", "simple")
@@ -1268,7 +1282,7 @@ def change_quantiles(x, ql, qh, isabs, f_agg):
     :return type: float
     """
     if ql >= qh:
-        ValueError("ql={} should be lower than qh={}".format(ql, qh))
+        ValueError(f"ql={ql} should be lower than qh={qh}")
 
     div = np.diff(x)
     if isabs:
@@ -1284,10 +1298,9 @@ def change_quantiles(x, ql, qh, isabs, f_agg):
     ind = (bin_cat_0 * np.roll(bin_cat_0, 1))[1:]
     if sum(ind) == 0:
         return 0
-    else:
-        ind_inside_corridor = np.where(ind == 1)
-        aggregator = getattr(np, f_agg)
-        return aggregator(div[ind_inside_corridor])
+    ind_inside_corridor = np.where(ind == 1)
+    aggregator = getattr(np, f_agg)
+    return aggregator(div[ind_inside_corridor])
 
 
 
@@ -1327,8 +1340,12 @@ def time_reversal_asymmetry_statistic(x, lag):
     if 2 * lag >= n:
         return 0
     else:
-        return np.mean((np.roll(x, 2 * -lag) * np.roll(x, 2 * -lag) * np.roll(x, -lag) -
-                        np.roll(x, -lag) * x * x)[0:(n - 2 * lag)])
+        return np.mean(
+            (
+                np.roll(x, 2 * -lag) * np.roll(x, 2 * -lag) * np.roll(x, -lag)
+                - np.roll(x, -lag) * x * x
+            )[: n - 2 * lag]
+        )
 
 
 @set_property("fctype", "simple")
@@ -1368,7 +1385,7 @@ def c3(x, lag):
     if 2 * lag >= n:
         return 0
     else:
-        return np.mean((np.roll(x, 2 * -lag) * np.roll(x, -lag) * x)[0:(n - 2 * lag)])
+        return np.mean((np.roll(x, 2 * -lag) * np.roll(x, -lag) * x)[:n - 2 * lag])
 
 
 @set_property("fctype", "simple")
@@ -1573,10 +1590,7 @@ def value_count(x, value):
     if not isinstance(x, (np.ndarray, pd.Series)):
         x = np.asarray(x)
 
-    if np.isnan(value):
-        return np.isnan(x).sum()
-    else:
-        return x[x == value].size
+    return np.isnan(x).sum() if np.isnan(value) else x[x == value].size
 
 
 @set_property("fctype", "simple")
@@ -1672,7 +1686,7 @@ def friedrich_coefficients(x, param):
     :return: the different feature values
     :return type: pandas.Series
     """
-    coefficients = set([config["coeff"] for config in param])
+    coefficients = {config["coeff"] for config in param}
     for coeff in coefficients:
         if coeff < 0:
             raise ValueError("Coefficients must be positive or zero.")
@@ -1681,7 +1695,7 @@ def friedrich_coefficients(x, param):
     r = param[0]['r']
 
     coeff = _estimate_friedrich_coefficients(x, m, r)
-    indices = ["m_{}__r_{}__coeff_{}".format(m, r, q) for q in range(m, -1, -1)]
+    indices = [f"m_{m}__r_{r}__coeff_{q}" for q in range(m, -1, -1)]
 
     return zip(indices, coeff)
 
@@ -1771,7 +1785,7 @@ def agg_linear_trend(x, param):
         else:
             res_data.append(getattr(calculated_agg[f_agg][chunk_len], attr))
 
-        res_index.append("f_agg_\"{}\"__chunk_len_{}__attr_\"{}\"".format(f_agg, chunk_len, attr))
+        res_index.append(f'f_agg_\"{f_agg}\"__chunk_len_{chunk_len}__attr_\"{attr}\"')
 
     return zip(res_index, res_data)
 
@@ -1810,6 +1824,6 @@ def energy_ratio_by_chunks(x, param):
         start = segment_focus*segment_length
         end = min((segment_focus+1)*segment_length, len(x))
         res_data.append(np.sum(x[start:end]**2.0)/full_series_energy)
-        res_index.append("num_segments_{}__segment_focus_{}".format(num_segments, segment_focus))
+        res_index.append(f"num_segments_{num_segments}__segment_focus_{segment_focus}")
 
     return list(zip(res_index, res_data)) # Materialize as list for Python 3 compatibility with name handling

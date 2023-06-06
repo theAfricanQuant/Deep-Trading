@@ -15,11 +15,11 @@ def shuffle_in_unison(a, b):
  
 def create_Xt_Yt(X, y, percentage=0.9):
     p = int(len(X) * percentage)
-    X_train = X[0:p]
-    Y_train = y[0:p]
-     
+    X_train = X[:p]
+    Y_train = y[:p]
+
     X_train, Y_train = shuffle_in_unison(X_train, Y_train)
- 
+
     X_test = X[p:]
     Y_test = y[p:]
 
@@ -27,8 +27,4 @@ def create_Xt_Yt(X, y, percentage=0.9):
 
 
 def remove_nan_examples(data):
-    newX = []
-    for i in range(len(data)):
-        if np.isnan(data[i]).any() == False:
-            newX.append(data[i])
-    return newX
+    return [data[i] for i in range(len(data)) if np.isnan(data[i]).any() == False]

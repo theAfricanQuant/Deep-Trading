@@ -50,22 +50,18 @@ def split_into_chunks(data, train, predict, step, binary=True, scale=True):
         try:
             x_i = data[i:i+train]
             y_i = data[i+train+predict]
-            
+
             # Use it only for daily return time series
             if binary:
-                if y_i > 0.:
-                    y_i = [1., 0.]
-                else:
-                    y_i = [0., 1.]
-
+                y_i = [1., 0.] if y_i > 0. else [0., 1.]
                 if scale: x_i = preprocessing.scale(x_i)
-                
+
             else:
                 timeseries = np.array(data[i:i+train+predict])
                 if scale: timeseries = preprocessing.scale(timeseries)
                 x_i = timeseries[:-1]
                 y_i = timeseries[-1]
-            
+
         except:
             break
 
@@ -88,9 +84,9 @@ def shuffle_in_unison(a, b):
 
 
 def create_Xt_Yt(X, y, percentage=0.8):
-    X_train = X[0:len(X) * percentage]
-    Y_train = y[0:len(y) * percentage]
-    
+    X_train = X[:len(X) * percentage]
+    Y_train = y[:len(y) * percentage]
+
     X_train, Y_train = shuffle_in_unison(X_train, Y_train)
 
     X_test = X[len(X) * percentage:]

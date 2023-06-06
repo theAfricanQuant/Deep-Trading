@@ -80,14 +80,9 @@ def transform_text2sentences(train, test, save_train = 'train_text.p', save_test
 		Transforming raw text into sentences, 
 		if @save_train or @save_test is not None - saves pickles for further use
 	'''
-	train_text = []
-	test_text = []
-	for each in train['Combined']:
-	    train_text.append(text_process(each))
-	for each in test['Combined']:
-	    test_text.append(text_process(each))
-
-	if save_train != None: cPickle.dump(train_text, open(save_train, 'wb')) 
+	train_text = [text_process(each) for each in train['Combined']]
+	test_text = [text_process(each) for each in test['Combined']]
+	if save_train != None: cPickle.dump(train_text, open(save_train, 'wb'))
 	if save_test != None: cPickle.dump(test_text, open(save_test, 'wb')) 
 
 	return train_text, test_text
@@ -123,27 +118,23 @@ def split_into_XY(data_chng_train, train_text_vectors, step, window, forecast):
 	'''
 	X_train, X_train_text, Y_train = [], [], []
 	for i in range(0, len(data_chng_train), step): 
-	    try:
-	        x_i = data_chng_train[i:i+window]
-	        y_i = data_chng_train[i+window+forecast]  
+		try:
+			x_i = data_chng_train[i:i+window]
+			y_i = data_chng_train[i+window+forecast]  
 
-	        # text_average = np.mean(train_text_vectors[i:i+WINDOW], axis=0)
-	        text_average = train_text_vectors[i:i+window]
+			# text_average = np.mean(train_text_vectors[i:i+WINDOW], axis=0)
+			text_average = train_text_vectors[i:i+window]
 
-	        last_close = x_i[-1]
-	        next_close = y_i
+			last_close = x_i[-1]
+			next_close = y_i
 
-	        if y_i > 0.:
-	            y_i = [1, 0]
-	        else:
-	            y_i = [0, 1] 
+			y_i = [1, 0] if y_i > 0. else [0, 1]
+		except Exception as e:
+		    break
 
-	    except Exception as e:
-	        break
-
-	    X_train.append(x_i)
-	    X_train_text.append(text_average)
-	    Y_train.append(y_i)
+		X_train.append(x_i)
+		X_train_text.append(text_average)
+		Y_train.append(y_i)
 
 	X_train, X_train_text, Y_train = np.array(X_train), np.array(X_train_text), np.array(Y_train)
 	return X_train, X_train_text, Y_train

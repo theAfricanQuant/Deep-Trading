@@ -69,11 +69,11 @@ def shuffle_in_unison(a, b):
  
 def create_Xt_Yt(X, y, percentage=0.95):
     p = int(len(X) * percentage)
-    X_train = X[0:p]
-    Y_train = y[0:p]
-     
+    X_train = X[:p]
+    Y_train = y[:p]
+
     X_train, Y_train = shuffle_in_unison(X_train, Y_train)
- 
+
     X_test = X[p:]
     Y_test = y[p:]
 

@@ -174,24 +174,20 @@ class OHLCFeatureExtractor():
 		data = self.timeseries
 		X, Y = [], []
 		for i in range(0, len(data), step):
-		    try:
-		        x_i = data[i:i+train]
-		        y_i = data[i+train+predict]  
+			try:
+				x_i = data[i:i+train]
+				y_i = data[i+train+predict]  
 
-		        last_close = x_i[train-1][target_index]
-		        next_close = y_i[target_index]
-		        y_i = next_close
+				last_close = x_i[train-1][target_index]
+				next_close = y_i[target_index]
+				y_i = next_close
 
-		        if binary:
-			        if last_close < next_close:
-			            y_i = 1.
-			        else:
-			            y_i = 0.   
+				if binary:
+					y_i = 1. if last_close < next_close else 0.
+			except:
+			    break
 
-		    except:
-		        break
-
-		    X.append(x_i)
-		    Y.append(y_i)
+			X.append(x_i)
+			Y.append(y_i)
 
 		return np.array(X), np.array(Y)
